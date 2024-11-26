@@ -6,6 +6,8 @@ __pycache__
 
 pipelines/*
 !pipelines/.gitignore
+# Allow files you want inside pipelines (e.g., any Python file or other necessary files)
+!pipelines/**/*.py
 .DS_Store
 
 .venv
