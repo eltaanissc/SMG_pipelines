@@ -33,15 +33,15 @@ class Pipeline:
         
         # Set up Azure Search client
         self.search_client = SearchClient(
-            endpoint="https://scsccps-dsai-turbosa-ais.search.windows.net",
-            index_name="vector-indexturbosa",
-            credential=AzureKeyCredential("40rAGgOU74ViVnMvFPH56HI6e4UfNQwF03qXeYqgXYAzSeC92785")
+            endpoint=os.environ.get("AZURE_SEARCH_URI"),
+            index_name=os.environ.get("AZURE_SEARCH_INDEX_NAME"),
+            credential=AzureKeyCredential(os.environ.get("AZURE_SEARCH_KEY"))
         )
         
         # Set up OpenAI client
         self.client = AzureOpenAI(
             azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.environ.get("ZURE_OPENAI_API_KEY") ,
+            api_key=os.environ.get("AZURE_OPENAI_API_KEY") ,
             api_version="2024-08-01-preview"
         )
         
