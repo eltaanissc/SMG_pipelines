@@ -28,7 +28,7 @@ class Pipeline:
 
     async def on_startup(self):
         # Set the OpenAI API key
-       # os.environ["AZURE_OPENAI_API_KEY"] = "https://scsccps-dsai-lab-dev-eastus-oai.openai.azure.com/"
+       #os.environ["AZURE_OPENAI_API_KEY"] = os.environ.get("ZURE_OPENAI_API_KEY")
        # os.environ["AZURE_OPENAI_ENDPOINT"] = '321ed4fcf1164d4eb751d089247520f6'
         
         # Set up Azure Search client
@@ -40,16 +40,16 @@ class Pipeline:
         
         # Set up OpenAI client
         self.client = AzureOpenAI(
-            azure_endpoint="https://scsccps-dsai-lab-dev-eastus-oai.openai.azure.com/",
-            api_key="321ed4fcf1164d4eb751d089247520f6",
+            azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.environ.get("ZURE_OPENAI_API_KEY") ,
             api_version="2024-08-01-preview"
         )
         
         # Set up Cosmos DB client
-        cosmos_db_uri = "https://scscdsaiturbosacd.documents.azure.com:443/"
-        cosmos_db_key = "Hn9yPCspaA2z8ddDM18IWG5b8tNFhzPFqPgGLcIEdgh2vVKFncoJ2bqXLnhY5g83ZzZnfI0yj8CgACDbhgFYiA=="
-        cosmos_db_name = "cosmos_db_controls"
-        cosmos_db_container = "control_history"
+        cosmos_db_uri = os.environ.get("COSMOS_DB_URI")
+        cosmos_db_key = os.environ.get("COSMOS_DB_KEY")
+        cosmos_db_name = os.environ.get("cosmos_db_controls")
+        cosmos_db_container = os.environ.get("cosmos_db_container")
         
         cosmos_client = CosmosClient(url=cosmos_db_uri, credential=cosmos_db_key)
         database = cosmos_client.get_database_client(database=cosmos_db_name)
