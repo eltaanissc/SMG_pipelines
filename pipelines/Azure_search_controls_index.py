@@ -6,6 +6,7 @@ version: 1.0
 license: MIT
 description: A pipeline for retrieving relevant information from an Azure-based knowledge base and synthesizing it using OpenAI's GPT model.
 requirements: azure-ai-openai, azure-search-documents, azure-identity, azure-cosmos
+test
 """
 
 import os
