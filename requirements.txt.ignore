@@ -68,6 +68,7 @@ llama-index-llms-ollama
 
 #azure 
 azure-functions
+openai
 azure-storage-blob
 azure-search-documents
 azure-identity

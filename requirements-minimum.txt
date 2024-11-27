@@ -13,3 +13,16 @@ requests==2.32.2
 aiohttp==3.9.5
 httpx
 
+
+#azure 
+azure-functions
+azure-storage-blob
+openai
+azure-search-documents
+azure-identity
+azure-cosmos
+pandas
+openpyxl
+jsonschema
+numpy
+
