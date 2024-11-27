@@ -25,4 +25,5 @@ pandas
 openpyxl
 jsonschema
 numpy
+dotenv
 
