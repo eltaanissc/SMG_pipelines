@@ -28,8 +28,7 @@ class Pipeline:
 
     async def on_startup(self):
         # Set the OpenAI API key
-       #os.environ["AZURE_OPENAI_API_KEY"] = os.environ.get("ZURE_OPENAI_API_KEY")
-       # os.environ["AZURE_OPENAI_ENDPOINT"] = '321ed4fcf1164d4eb751d089247520f6'
+   
         
         # Set up Azure Search client
         self.search_client = SearchClient(
