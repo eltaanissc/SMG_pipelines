@@ -199,8 +199,12 @@ class Pipeline:
         family_match = re.search(r"(Family|family):\s*([A-Za-z]+)", message)
         # Extract Control ID
         control_id_match = re.search(r"(ControlID|controlid|ID|id):\s*(\d+)", message)
+
+
         family = family_match.group(2) if family_match else None
         control_id = control_id_match.group(2) if control_id_match else None
+
+
         return family, control_id
 
     def run_search(self, query_text: str):
@@ -229,17 +233,16 @@ class Pipeline:
         
         # Extract Family and ControlID from user message
         family, control_id = self.extract_family_and_control_id(user_message)
-        
+
         if family and control_id:
             control_data = self.fetch_cosmos_data(family, control_id)
             if control_data:
                 control_name = control_data["Name"]
                 generated_questions = control_data["GeneratedQuestions"].split("\n")  # List of questions
-                generated_questions = [q.strip() for q in generated_questions if q.strip()]
 
-                # # Limit to the first 3 questions if they exist
-                
-        return generated_questions
+                # Limit to the first 3 questions if they exist
+                first_questions = generated_questions[:1]
+        return first_questions
 
             #     all_answers = []
 
@@ -289,8 +292,8 @@ class Pipeline:
             #     final_response += f"\n\n---\nSources used:\n{source_list}"
 
             #     return final_response
-        # else:
-        #     return f"No control data found for Family: '{family}' and ControlID: '{control_id}'."
+        else:
+            return f"No control data found for Family: '{family}' and ControlID: '{control_id}'."
             
         # else:
         #     # If no family and control_id are provided, fall back to regular search
