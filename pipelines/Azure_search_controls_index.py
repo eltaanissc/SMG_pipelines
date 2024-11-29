@@ -162,46 +162,74 @@ class Pipeline:
 
     async def on_startup(self):
         load_dotenv()
-        self.client_cosmosdb = CosmosClient(
+        try:
+            self.client_cosmosdb = CosmosClient(
                 os.getenv("COSMOS_DB_URI"),
                 os.getenv("COSMOS_DB_KEY")
             )
-        self.database = self.client_cosmosdb.get_database_client(os.getenv("COSMOS_DB_NAME"))
-        self.container = self.database.get_container_client(os.getenv("COSMOS_DB_CONTAINER"))
+            print("Connected to Cosmos DB successfully.")
+            
+            self.database = self.client_cosmosdb.get_database_client(os.getenv("COSMOS_DB_NAME"))
+            self.container = self.database.get_container_client(os.getenv("COSMOS_DB_CONTAINER"))
+            print("Cosmos DB container connection successful.")
+            
+        except Exception as e:
+            print(f"Failed to connect to Cosmos DB: {e}")
 
-        self.client = AzureOpenAI(
+        try:
+            self.client = AzureOpenAI(
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
                 api_version="2024-08-01-preview"
             )
-        self.search_client = SearchClient(
-            endpoint=os.getenv("AZURE_SEARCH_URI"),
-            index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
-            credential=AzureKeyCredential(os.getenv("AZURE_SEARCH_KEY")),
-        )
-
-
- 
-
-
+            print("Connected to Azure OpenAI successfully.")
+        except Exception as e:
+            print(f"Failed to connect to Azure OpenAI: {e}")
+        
+        try:
+            self.search_client = SearchClient(
+                endpoint=os.getenv("AZURE_SEARCH_URI"),
+                index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
+                credential=AzureKeyCredential(os.getenv("AZURE_SEARCH_KEY")),
+            )
+            print("Connected to Azure Search successfully.")
+        except Exception as e:
+            print(f"Failed to connect to Azure Search: {e}")
 
     async def on_shutdown(self):
         pass
 
     def fetch_cosmos_data(self, family: str, control_id: str):
-
         query = f"SELECT * FROM c WHERE c.Family = '{family}' AND c.ControlID = '{control_id}'"
-        results = list(self.container.query_items(query=query, enable_cross_partition_query=True))
-        return results[0] if results else None
+        try:
+            results = list(self.container.query_items(query=query, enable_cross_partition_query=True))
+            if results:
+                print(f"Query successful: {len(results)} item(s) retrieved.")
+                return results[0]
+            else:
+                print("Query executed, but no results found.")
+                return None
+        except Exception as e:
+            print(f"Error executing query: {e}")
+            return None
 
-    def extract_family_and_control_id (self, message: str):
-        # Extract Family
-        family_match = re.search(r"(Family|family):\s*([A-Za-z]+)", message)
-        # Extract Control ID
+
+
+
+    def extract_family_and_control_id(self, message: str):
+        # Extract Family (allow Family: AC and similar patterns)
+        family_match = re.search(r"(Family|family):\s*([A-Za-z0-9\-]+)", message)
+        
+        # Extract Control ID (allow ControlID: 1 and similar patterns)
         control_id_match = re.search(r"(ControlID|controlid|ID|id):\s*(\d+)", message)
+        
+        # If matches found, extract the values
         family = family_match.group(2) if family_match else None
         control_id = control_id_match.group(2) if control_id_match else None
+        
+        
         return family, control_id
+
 
     def run_search(self, query_text: str):
         search_results = self.search_client.search(
@@ -229,90 +257,87 @@ class Pipeline:
         
         # Extract Family and ControlID from user message
         family, control_id = self.extract_family_and_control_id(user_message)
-        
+
+
         if family and control_id:
             control_data = self.fetch_cosmos_data(family, control_id)
             if control_data:
-                control_name = control_data["Name"]
-                generated_questions = control_data["GeneratedQuestions"].split("\n")  # List of questions
-                generated_questions = [q.strip() for q in generated_questions if q.strip()]
+                    control_name = control_data["Name"]
+                    generated_questions = control_data["GeneratedQuestions"].split("\n")  # List of questions
+                    generated_questions = [q.strip() for q in generated_questions if q.strip()]       
 
-                # # Limit to the first 3 questions if they exist
-                
-        return generated_questions
+                    all_answers = []
 
-            #     all_answers = []
+                    # Loop through the first 3 questions, sending one by one to the chat
+                    for question in generated_questions:
+                            question = question.strip()  # Clean any leading/trailing spaces
+                            
+                            if question:  # Skip empty questions if any
+                                # Construct the search query for the specific question
+                                search_query = f"{control_name} {question}"
 
-            #     # Loop through the first 3 questions, sending one by one to the chat
-            #     for question in first_questions:
-            #         question = question.strip()  # Clean any leading/trailing spaces
+                                # Perform search with both control name and question for specific chunks
+                                search_results, source_list = self.run_search(search_query)
 
-            #         if question:  # Skip empty questions if any
-            #             # Construct the search query for the specific question
-            #             search_query = f"{control_name} {question}"
+                                if  search_results:
+                                    
+                                    sys_prompt = f"""
+                                    You are an expert in security controls. Respond to the following QUESTION based on the provided CONTROL NAME and DOCUMENT TEXT.
+                                    Provide the company's name at the beginning. Verify if the QUESTION is answered in the DOCUMENT TEXT. Do not add any unnecessary explanations                                Provied the company's name at the begning. Verify if the  QUESTION was answerd in DOCUMENT TEXT.Don't add any unecessairy explanations.
 
-            #             # Perform search with both control name and question for specific chunks
-            #             search_results, source_list = self.run_search(search_query)
+                                    CONTROL NAME: {control_name}
+                                    DOCUMENT TEXT: {search_results}
+                                    QUESTION: {question}
+                                    """
 
-            #             sys_prompt = f"""
-            #             You are an expert in security controls. Respond to the following question based on the provided control and document text.
+                                    chat_prompt = [
+                                        {"role": "system", "content": sys_prompt},
+                                        {"role": "user", "content": question},
+                                    ]
 
-            #             CONTROL NAME: {control_name}
-            #             DOCUMENT TEXT: {search_results}
-            #             QUESTION: {question}
-            #             """
+                                    # Get the answer for the current question
+                                    completion = self.client.chat.completions.create(
+                                        model="gpt-4o",
+                                        messages=chat_prompt,
+                                        max_tokens=800,
+                                        temperature=0.7,
+                                        top_p=0.95
+                                    )
 
-            #             chat_prompt = [
-            #                 {"role": "system", "content": sys_prompt},
-            #                 {"role": "user", "content": question},
-            #             ]
+                                    # Retrieve the response and store it
+                                    gpt_result = completion.choices[0].message.content
+                                    print(source_list)
 
-            #             # Get the answer for the current question
-            #             completion = self.client.chat.completions.create(
-            #                 model="gpt-4o",
-            #                 messages=chat_prompt,
-            #                 max_tokens=800,
-            #                 temperature=0.7,
-            #                 top_p=0.95
-            #             )
 
-            #             # Retrieve the response and store it
-            #             gpt_result = completion["choices"][0]["message"]["content"]
+                                # Store the result as a tuple (question, answer)
+                                all_answers.append(f"**Q: {question}**\nA: {gpt_result}\nSources used:\n{source_list}")
 
-            #             # Store the result as a tuple (question, answer)
-            #             all_answers.append(f"**Q: {question}**\nA: {gpt_result}\n")
+                        # Combine all the answers into a single response
+                            final_response = f"**Family:'{family}'**\n ControlID:'{control_id}'\n".join(all_answers)
 
-            #     # Combine all the answers into a single response
-            #     final_response = "\n".join(all_answers)
+            return f"'{final_response}'"
+           
+        else:
+            # If no family and control_id are provided, fall back to regular search
+            search_results, source_list = self.run_search(user_message)
+            sys_prompt = f"""
+            You are a semantic search assistant. Respond to the user’s query with relevant information from the retrieved DOCUMENT TEXT.
 
-            #     # Add sources at the end
-            #     final_response += f"\n\n---\nSources used:\n{source_list}"
+            DOCUMENT TEXT: {search_results}
+            """
+            chat_prompt = [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_message},
+            ]
 
-            #     return final_response
-        # else:
-        #     return f"No control data found for Family: '{family}' and ControlID: '{control_id}'."
-            
-        # else:
-        #     # If no family and control_id are provided, fall back to regular search
-        #     search_results, source_list = self.run_search(user_message)
-        #     sys_prompt = f"""
-        #     You are a semantic search assistant. Respond to the user’s query with relevant information from the retrieved content.
+            completion = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=chat_prompt,
+                max_tokens=800,
+                temperature=0.7,
+                top_p=0.95,
+            )
 
-        #     DOCUMENT TEXT: {search_results}
-        #     """
-        #     chat_prompt = [
-        #         {"role": "system", "content": sys_prompt},
-        #         {"role": "user", "content": user_message},
-        #     ]
-
-        #     completion = self.client.chat.completions.create(
-        #         model="gpt-4o",
-        #         messages=chat_prompt,
-        #         max_tokens=800,
-        #         temperature=0.7,
-        #         top_p=0.95,
-        #     )
-
-        #     gpt_result = completion.choices[0].message.content
-        #     gpt_result += f"\n\n---\nSources used:\n{source_list}"
-        #     return gpt_result
+            gpt_result = completion.choices[0].message.content
+            gpt_result += f"\n\n---\nSources used:\n{source_list}"
+            return gpt_result
