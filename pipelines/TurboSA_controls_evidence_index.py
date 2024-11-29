@@ -22,9 +22,6 @@ from dotenv import load_dotenv
 
 class Pipeline:
     def __init__(self):
-        pass
-
-    async def on_startup(self):
         load_dotenv()
         try:
             self.client_cosmosdb = CosmosClient(
@@ -59,6 +56,10 @@ class Pipeline:
             print("Connected to Azure Search successfully.")
         except Exception as e:
             print(f"Failed to connect to Azure Search: {e}")
+        pass
+
+    async def on_startup(self):
+        pass
 
     async def on_shutdown(self):
         pass
@@ -118,14 +119,20 @@ class Pipeline:
                 ]
             )
         
-        source_list = "Files and chunks:\n".join(
-                [
-                    f"Title: {document['title']}\n"
-                    f"Score: {document['@search.score']:.2f}\n"
-                    f"Related text starts from: {' '.join(document['chunk'].split()[:20])}..."
-                    for document in search_results
-                ]
-            )
+        # Sort by score in descending order and take the top three
+        top_results = sorted(search_results, key=lambda doc: doc['@search.score'], reverse=True)[:3]
+
+        
+    # Formatting to lowercase and bold using ANSI escape codes
+        source_list = "\n\n".join(
+            [
+                f"**title:** {document['title'].lower()}\n"
+                f"**score:** {document['@search.score']:.2f}\n"
+                f"**related text starts from:** {' '.join(document['chunk'].lower().split()[:20])}..."
+                for document in top_results
+            ]
+        )
+
 
 
 
@@ -156,21 +163,19 @@ class Pipeline:
                             if question:  # Skip empty questions if any
                                 # Construct the search query for the specific question
                                 search_query = f"{control_name} {question}"
-                                print(question)
                                 
                                 # Perform search with both control name and question for specific chunks
                                 sources_formatted, source_list = self.run_search(search_query)
-                            
-                                print (f"{source_list}")
                                 
                                 if  sources_formatted :
                                     
                                     sys_prompt = f"""
                                     You are an expert in security controls. Respond to the following QUESTION based on the provided CONTROL NAME and DOCUMENT TEXT.
-                                    Provide the company's name at the beginning. Verify if the QUESTION is answered in the DOCUMENT TEXT and presente the Text and page number supporting this at the end. Do not add any unnecessary explanations                                Provied the company's name at the begning. Verify if the  QUESTION was answerd in DOCUMENT TEXT.Don't add any unecessairy explanations.
+                                    Provide the company's name at the beginning. Verify if the QUESTION is answered in the DOCUMENT TEXT and presente the Text and page number supporting this at the end. Do not add any unnecessary explanations                                
+                                    Answer the QUESTION in small paragraph.
 
                                     CONTROL NAME: {control_name}
-                                    DOCUMENT TEXT: {f"{sources_formatted}"}
+                                    DOCUMENT TEXT: {sources_formatted}
                                     QUESTION: {question}
                                     """
 
