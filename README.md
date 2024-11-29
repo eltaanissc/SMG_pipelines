@@ -1,118 +1,167 @@
-<p align="center">
-  <a href="#"><img src="./docs/images/header.png" alt="Pipelines Logo"></a>
-</p>
+# **Azure OpenAI Knowledge Retrieval Pipeline**
 
-# Pipelines: UI-Agnostic OpenAI API Plugin Framework
+## **Overview**  
+This pipeline is designed to integrate Azure's Cosmos DB, Azure Cognitive Search, and OpenAI’s GPT model to retrieve, process, and synthesize relevant information from a knowledge base. It responds to user queries by searching indexed documents, generating answers based on the retrieved content, and returning concise, context-specific responses.
 
-> [!TIP]
-> If your goal is simply to add support for additional providers like Anthropic or basic filters, you likely don't need Pipelines . For those cases, Open WebUI Functions are a better fit—it's built-in, much more convenient, and easier to configure. Pipelines, however, comes into play when you're dealing with computationally heavy tasks (e.g., running large models or complex logic) that you want to offload from your main Open WebUI instance for better performance and scalability.
+---
+
+## **Purpose**  
+The Azure OpenAI Knowledge Retrieval Pipeline allows organizations to:  
+- Efficiently retrieve specific information from large, Azure-hosted knowledge repositories.  
+- Utilize advanced AI (OpenAI GPT) to generate human-like responses to queries.  
+- Support enhanced decision-making by providing precise, document-supported answers.
+
+---
+
+## **Key Components**  
+
+### 1. **Azure Cosmos DB**  
+- **Purpose**: Storing structured data, particularly family and control information.  
+- **Libraries**:  
+  - `azure.cosmos`: Provides connection and querying capabilities for Cosmos DB.  
+- **Key Functions**:  
+  - `fetch_cosmos_data()`: Executes a query to retrieve records based on the provided Family and ControlID.  
+
+---
+
+### 2. **Azure Cognitive Search**  
+- **Purpose**: Retrieves relevant document chunks from a knowledge base using semantic search capabilities.  
+- **Libraries**:  
+  - `azure.search.documents`: Used to interact with Azure Cognitive Search.  
+  - `azure.core.credentials.AzureKeyCredential`: Manages authentication.  
+- **Key Functions**:  
+  - `run_search()`: Executes a semantic search, formats results, and retrieves top-matching documents.
+
+---
+
+### 3. **OpenAI GPT (via Azure OpenAI Service)**  
+- **Purpose**: Synthesizes retrieved data and generates human-readable responses.  
+- **Libraries**:  
+  - `openai`: Used to interact with the Azure-hosted GPT model.  
+- **Key Functions**:  
+  - `pipe()`: Handles the primary logic, combining Cosmos DB queries, Azure Search, and OpenAI GPT responses.  
+
+---
+
+## **Pipeline Flow**  
+1. **User Query Input**:  
+   - Extracts **Family** and **ControlID** if specified in the query.  
+   - If no identifiers are detected, defaults to a general semantic search.  
+2. **Data Retrieval**:  
+   - Queries Cosmos DB for relevant control metadata.  
+   - Searches Azure Cognitive Search for document excerpts related to the query.  
+3. **Response Generation**:  
+   - Constructs a system prompt with retrieved data.  
+   - Uses OpenAI GPT to generate answers by analyzing document excerpts.  
+   - Returns answers with references to the corresponding documents.
+
+---
+
+## **Requirements**  
+
+### **Python Libraries**  
+- `azure-search-documents`  
+- `azure-cosmos`  
+- `openai`  
+- `python-dotenv`  
+
+### **Environment Variables** (via `.env` file)  
+- `COSMOS_DB_URI`: Cosmos DB connection URI  
+- `COSMOS_DB_KEY`: Cosmos DB access key  
+- `COSMOS_DB_NAME`: Database name  
+- `COSMOS_DB_CONTAINER`: Container name  
+- `AZURE_SEARCH_URI`: Azure Search endpoint  
+- `AZURE_SEARCH_KEY`: Azure Search key  
+- `AZURE_SEARCH_INDEX_NAME`: Index name used in Azure Search  
+- `AZURE_OPENAI_ENDPOINT`: Azure OpenAI service endpoint  
+- `AZURE_OPENAI_API_KEY`: API key for Azure OpenAI  
+
+---
+
+## **Usage Instructions**  
+1. **Setup Environment**:  
+   - Install the necessary Python libraries using:  
+     ```bash  
+     pip install azure-search-documents azure-cosmos openai python-dotenv  
+     ```  
+   - Configure environment variables in a `.env` file.  
+2. **Run the Pipeline**:  
+   - Execute the pipeline script, which connects to Azure services and responds to user queries.  
+
+---
+
+## **Output Format**  
+- **Response**:  
+  Generated answer based on control metadata and document context.  
+- **Sources**:  
+  Provides a reference list of document excerpts used in the response.  
 
 
-Welcome to **Pipelines**, an [Open WebUI](https://github.com/open-webui) initiative. Pipelines bring modular, customizable workflows to any UI client supporting OpenAI API specs – and much more! Easily extend functionalities, integrate unique logic, and create dynamic workflows with just a few lines of code.
+# Virtual Machine Setup and Application Installation
 
-## 🚀 Why Choose Pipelines?
+## **1. Create a Linux Virtual Machine on Azure Portal**
 
-- **Limitless Possibilities:** Easily add custom logic and integrate Python libraries, from AI agents to home automation APIs.
-- **Seamless Integration:** Compatible with any UI/client supporting OpenAI API specs. (Only pipe-type pipelines are supported; filter types require clients with Pipelines support.)
-- **Custom Hooks:** Build and integrate custom pipelines.
+Follow these steps to create a Linux Virtual Machine (VM) on the Azure Portal:
 
-### Examples of What You Can Achieve:
+1. **Log in to Azure Portal**  
+   Go to the [Azure Portal](https://portal.azure.com/) and log in with your credentials.
 
-- [**Function Calling Pipeline**](/examples/filters/function_calling_filter_pipeline.py): Easily handle function calls and enhance your applications with custom logic.
-- [**Custom RAG Pipeline**](/examples/pipelines/rag/llamaindex_pipeline.py): Implement sophisticated Retrieval-Augmented Generation pipelines tailored to your needs.
-- [**Message Monitoring Using Langfuse**](/examples/filters/langfuse_filter_pipeline.py): Monitor and analyze message interactions in real-time using Langfuse.
-- [**Rate Limit Filter**](/examples/filters/rate_limit_filter_pipeline.py): Control the flow of requests to prevent exceeding rate limits.
-- [**Real-Time Translation Filter with LibreTranslate**](/examples/filters/libretranslate_filter_pipeline.py): Seamlessly integrate real-time translations into your LLM interactions.
-- [**Toxic Message Filter**](/examples/filters/detoxify_filter_pipeline.py): Implement filters to detect and handle toxic messages effectively.
-- **And Much More!**: The sky is the limit for what you can accomplish with Pipelines and Python. [Check out our scaffolds](/examples/scaffolds) to get a head start on your projects and see how you can streamline your development process!
+2. **Create a Virtual Machine**  
+   - In the Azure Portal, click **"Create a resource"** in the left sidebar.
+   - Under **"Compute"**, click **"Virtual Machine"**.
+   - Click **"Create"** to start configuring your VM.
 
-## 🔧 How It Works
+3. **Configure Basic Settings for the Virtual Machine**  
+   - **Subscription:** Select your subscription.
+   - **Resource Group:** Create or select an existing resource group.
+   - **Virtual Machine Name:** Provide a name for your VM.
+   - **Region:** Choose your preferred region.
+   - **Image:** Select a Linux image (e.g., Ubuntu 20.04 LTS).
+   - **Size:** Select an appropriate size based on your requirements.
+   - **Authentication Type:** Select SSH public key.
+   - **Username:** Set a username.
+   - **SSH Public Key:** Paste your public SSH key.
 
-<p align="center">
-  <a href="./docs/images/workflow.png"><img src="./docs/images/workflow.png" alt="Pipelines Workflow"></a>
-</p>
+4. **Configure Networking Settings**  
+   - **Virtual Network:** Select an existing Virtual Network or create a new one.
+   - **Subnet:** Select an existing subnet or create a new one.
+   - **Public IP:** Ensure a public IP is assigned.
+   - **Network Security Group (NSG):** Select **"Basic"** and configure the NSG in the next step.
 
-Integrating Pipelines with any OpenAI API-compatible UI client is simple. Launch your Pipelines instance and set the OpenAI URL on your client to the Pipelines URL. That's it! You're ready to leverage any Python library for your needs.
+## **2. Create Network Security Group (NSG) Inbound Port Rules**
 
-## ⚡ Quick Start with Docker
+To enable the necessary ports for communication with your VM, configure the NSG inbound rules as follows:
 
-> [!WARNING]
-> Pipelines are a plugin system with arbitrary code execution — **don't fetch random pipelines from sources you don't trust**.
+1. **Go to Network Security Group**  
+   In the Azure portal, search for **"Network Security Group"** in the search bar.
 
-For a streamlined setup using Docker:
+2. **Configure Inbound Port Rules**  
+   - Click on your NSG and go to the **"Inbound security rules"** section.
+   - Click **"Add"** to create new rules for the following ports:
+     - **8080**
+     - **3000**
+     - **3030**
+     - **9090**
+     - **6333-6334**
+     - **9099**
+   
+   For each rule, enter the following details:
+   - **Source:** Any
+   - **Source port ranges:** *
+   - **Destination:** Any
+   - **Destination port ranges:** Enter one of the above port ranges.
+   - **Protocol:** TCP
+   - **Action:** Allow
+   - **Priority:** Choose a unique priority.
+   - **Name:** Provide a name for each rule (e.g., `Allow_8080`, `Allow_3000`, etc.).
+   - Click **"Add"** to save each rule.
 
-1. **Run the Pipelines container:**
+## **3. Connect to the Virtual Machine via SSH**
 
-   ```sh
-   docker run -d -p 9099:9099 --add-host=host.docker.internal:host-gateway -v pipelines:/app/pipelines --name pipelines --restart always ghcr.io/open-webui/pipelines:main
-   ```
+To connect to the newly created VM, use the following SSH command:
 
-2. **Connect to Open WebUI:**
+```bash
+ssh -i /path/to/your/private-key.pem username@your-vm-ip-address
 
-   - Navigate to the **Settings > Connections > OpenAI API** section in Open WebUI.
-   - Set the API URL to `http://localhost:9099` and the API key to `0p3n-w3bu!`. Your pipelines should now be active.
 
-> [!NOTE]
-> If your Open WebUI is running in a Docker container, replace `localhost` with `host.docker.internal` in the API URL.
 
-3. **Manage Configurations:**
-
-   - In the admin panel, go to **Admin Settings > Pipelines tab**.
-   - Select your desired pipeline and modify the valve values directly from the WebUI.
-
-> [!TIP]
-> If you are unable to connect, it is most likely a Docker networking issue. We encourage you to troubleshoot on your own and share your methods and solutions in the discussions forum.
-
-If you need to install a custom pipeline with additional dependencies:
-
-- **Run the following command:**
-
-  ```sh
-  docker run -d -p 9099:9099 --add-host=host.docker.internal:host-gateway -e PIPELINES_URLS="https://github.com/open-webui/pipelines/blob/main/examples/filters/detoxify_filter_pipeline.py" -v pipelines:/app/pipelines --name pipelines --restart always ghcr.io/open-webui/pipelines:main
-  ```
-
-Alternatively, you can directly install pipelines from the admin settings by copying and pasting the pipeline URL, provided it doesn't have additional dependencies.
-
-That's it! You're now ready to build customizable AI integrations effortlessly with Pipelines. Enjoy!
-
-## 📦 Installation and Setup
-
-Get started with Pipelines in a few easy steps:
-
-1. **Ensure Python 3.11 is installed.**
-2. **Clone the Pipelines repository:**
-
-   ```sh
-   git clone https://github.com/open-webui/pipelines.git
-   cd pipelines
-   ```
-
-3. **Install the required dependencies:**
-
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-4. **Start the Pipelines server:**
-
-   ```sh
-   sh ./start.sh
-   ```
-
-Once the server is running, set the OpenAI URL on your client to the Pipelines URL. This unlocks the full capabilities of Pipelines, integrating any Python library and creating custom workflows tailored to your needs.
-
-## 📂 Directory Structure and Examples
-
-The `/pipelines` directory is the core of your setup. Add new modules, customize existing ones, and manage your workflows here. All the pipelines in the `/pipelines` directory will be **automatically loaded** when the server launches.
-
-You can change this directory from `/pipelines` to another location using the `PIPELINES_DIR` env variable.
-
-### Integration Examples
-
-Find various integration examples in the `/examples` directory. These examples show how to integrate different functionalities, providing a foundation for building your own custom pipelines.
-
-## 🎉 Work in Progress
-
-We’re continuously evolving! We'd love to hear your feedback and understand which hooks and features would best suit your use case. Feel free to reach out and become a part of our Open WebUI community!
-
-Our vision is to push **Pipelines** to become the ultimate plugin framework for our AI interface, **Open WebUI**. Imagine **Open WebUI** as the WordPress of AI interfaces, with **Pipelines** being its diverse range of plugins. Join us on this exciting journey! 🌍
