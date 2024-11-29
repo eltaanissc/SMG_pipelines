@@ -1,150 +1,14 @@
-# """
-# title: Azure OpenAI Knowledge Retrieval Pipeline
-# author: open-webui
-# date: 2024-11-26
-# version: 1.0
-# license: MIT
-# description: A pipeline for retrieving relevant information from an Azure-based knowledge base and synthesizing it using OpenAI's GPT model.
-# requirements:  azure-search-documents, azure-identity, azure-cosmos
-# test
-# """
+"""
+title: Azure OpenAI Knowledge Retrieval Pipeline
+author: open-webui
+date: 2024-11-26
+version: 1.0
+license: MIT
+description: A pipeline for retrieving relevant information from an Azure-based knowledge base and synthesizing it using OpenAI's GPT model.
+requirements:  azure-search-documents,  azure-cosmos
 
-# import os
-# import uuid
-# from typing import List, Union, Generator, Iterator
-# from azure.search.documents import SearchClient
-# from azure.core.credentials import AzureKeyCredential
-# from azure.search.documents.models import VectorQuery
-# from azure.cosmos import CosmosClient
-# from openai import AzureOpenAI
-# from dotenv import load_dotenv
+"""
 
-
-# class Pipeline:
-#     def __init__(self):
-
-#         pass
-       
-
-#     async def on_startup(self):
-#         # Set the OpenAI API key
-#         self.search_client = SearchClient(
-#                 endpoint=os.getenv("AZURE_SEARCH_URI"),
-#                 index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
-#                 credential=AzureKeyCredential(os.getenv("AZURE_SEARCH_KEY"))
-#         )
-        
-#         # # Set up OpenAI client
-#         # self.client = AzureOpenAI(
-#         #     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-#         #     api_key=os.getenv("AZURE_OPENAI_API_KEY") ,
-#         #     api_version="2024-08-01-preview"
-#         # )
-        
-#         # Set up Cosmos DB client
-#         # cosmos_db_uri = os.getenv("COSMOS_DB_URI")
-#         # cosmos_db_key = os.getenv("COSMOS_DB_KEY")
-#         # cosmos_db_name = os.getenv("cosmos_db_controls")
-#         # cosmos_db_container = os.getenv("cosmos_db_container")
-        
-#         # cosmos_client = CosmosClient(url=cosmos_db_uri, credential=cosmos_db_key)
-#         # database = cosmos_client.get_database_client(database=cosmos_db_name)
-#         # self.container = database.get_container_client(container=cosmos_db_container)
-#         pass
-
-#     async def on_shutdown(self):
-#         # This function is called when the server is stopped.
-#         pass
-
-#     def pipe(
-#         self, user_message: str, model_id: str, messages: List[dict], body: dict
-#     ) -> Union[str, Generator, Iterator]:
-        
-#         load_dotenv()
-        
-#         # Set up Azure Search client
-#         try :
-#             search_client = SearchClient(
-#                     endpoint=os.getenv("AZURE_SEARCH_URI"),
-#                     index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
-#                     credential=AzureKeyCredential(os.getenv("AZURE_SEARCH_KEY"))
-#             )
-#             msg= "Search client initialized successfully"
-#         except Exception as e:
-#             msg= f"Error initializing SearchClient: {e}"
-
-#         try:
-#             self.client = AzureOpenAI(
-#                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-#                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-#                 api_version="2024-08-01-preview"
-#             )
-#             msg1= "Azure OpenAI client initialized successfully"
-#         except Exception as e:
-#             msg1=f"Error initializing AzureOpenAI client: {e}"
-#         """
-#         This method retrieves relevant information from the Azure knowledge base, 
-#         and uses OpenAI's GPT model to synthesize the response.
-#         """
-#         print(f"User message: {user_message}")
-        
-#         # Step 1: Search for relevant documents from Azure Search
-#         # #vector_query = VectorQuery(vector=user_message, fields="text_vector", k_nearest_neighbors=5, kind="vector")
-#         # try:
-#         # # Perform the search operation
-#         search_results = self.search_client.search(
-#                 search_text=user_message,
-#                 query_type="semantic",
-#                 select=["title", "chunk"],
-#                 semantic_configuration_name="vector-indexturbosa-semantic-configuration",
-#                 top=5
-#             )
-            
-
-#         # # Format search results to pass as context for GPT
-#         used_sources = []
-#         sources_formatted = "\n=================\n".join(
-#             [
-#                 f"FILE: {document['title']}\nCONTENT: {document['chunk']}"
-#                 for document in search_results
-#                 if used_sources.append((document['title'], document.get("@search.score", 0))) or True
-#             ])
-        
-#         # # Step 2: Use GPT to synthesize the response from the retrieved information
-#         sys_prompt = f"""
-#         You are an expert in security controls and help people identify relevant controls for their situation based on document text.
-        
-#         DOCUMENT TEXT: {sources_formatted}
-#         """
-        
-#         chat_prompt = [
-#             {
-#                 "role": "system",
-#                 "content": sys_prompt
-#             },
-#             {
-#                 "role": "user",
-#                 "content": user_message
-#             }
-#         ]
-        
-#         # # Step 3: Call OpenAI's GPT model to generate a response
-#         completion = self.client.chat.completions.create(
-#             model="gpt-4o",
-#             messages=chat_prompt,
-#             max_tokens=800,
-#             temperature=0.7,
-#             top_p=0.95
-#         )
-
-#         gpt_result = completion.choices[0].message.content
-#         # Append the titles and relevant scores at the bottom of the response
-#         source_list = "\n".join(
-#             [f"- {title} (Score: {score:.2f})" for title, score in set(used_sources)]
-#         )
-#         gpt_result += f"\n\n---\nSources used:\n{source_list}"
-        
-#         return gpt_result
 
 import os
 import re
@@ -235,7 +99,7 @@ class Pipeline:
         search_results = self.search_client.search(
             search_text=query_text,
             query_type="semantic",
-            select=["title", "chunk"],
+            select=["title", "chunk","@search.score"],
             semantic_configuration_name="vector-indexturbosa-semantic-configuration",
             top=5,
         )
@@ -246,8 +110,9 @@ class Pipeline:
             ]
         )
         source_list = "\n".join(
-            [f"- {document['title']} (Score: {document['@search.score']:.2f})" for document in search_results]
+            [f"- {document['title']} (Score: {search_results['@search.score']}:.2f})" for document in search_results]
         )
+        print (f"'{source_list}'")
         return sources_formatted, source_list
 
     def pipe(
@@ -306,7 +171,7 @@ class Pipeline:
 
                                     # Retrieve the response and store it
                                     gpt_result = completion.choices[0].message.content
-                                    print(source_list)
+                                    print(f"'{source_list}'")
 
 
                                 # Store the result as a tuple (question, answer)
@@ -322,6 +187,7 @@ class Pipeline:
             search_results, source_list = self.run_search(user_message)
             sys_prompt = f"""
             You are a semantic search assistant. Respond to the user’s query with relevant information from the retrieved DOCUMENT TEXT.
+            Provide the company's name at the beginning. Verify if the query is answered in the DOCUMENT TEXT. Do not add any unnecessary explanations  
 
             DOCUMENT TEXT: {search_results}
             """
