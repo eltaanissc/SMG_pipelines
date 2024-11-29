@@ -1,4 +1,4 @@
-# **TurboSA OpenUIWeb Pipeline Controls Evidence Retrieval **
+# TurboSA OpenUIWeb Pipeline Controls Evidence Retrieval
 
 ## **Overview**  
 This pipeline is designed to integrate Azure's Cosmos DB, Azure Cognitive Search, and OpenAI’s GPT model to retrieve, process, and synthesize relevant information from a knowledge base. It responds to user queries by searching indexed documents, generating answers based on the retrieved content, and returning concise, context-specific responses.
