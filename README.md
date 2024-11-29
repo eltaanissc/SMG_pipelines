@@ -1,4 +1,4 @@
-# **Azure OpenAI Knowledge Retrieval Pipeline**
+# **TurboSA OpenUIWeb Pipeline Controls Evidence Retrieval **
 
 ## **Overview**  
 This pipeline is designed to integrate Azure's Cosmos DB, Azure Cognitive Search, and OpenAI’s GPT model to retrieve, process, and synthesize relevant information from a knowledge base. It responds to user queries by searching indexed documents, generating answers based on the retrieved content, and returning concise, context-specific responses.
@@ -6,7 +6,7 @@ This pipeline is designed to integrate Azure's Cosmos DB, Azure Cognitive Search
 ---
 
 ## **Purpose**  
-The Azure OpenAI Knowledge Retrieval Pipeline allows organizations to:  
+TurboSA OpenUIWeb Pipeline Controls Evidence Retrieval allows organizations to:  
 - Efficiently retrieve specific information from large, Azure-hosted knowledge repositories.  
 - Utilize advanced AI (OpenAI GPT) to generate human-like responses to queries.  
 - Support enhanced decision-making by providing precise, document-supported answers.
