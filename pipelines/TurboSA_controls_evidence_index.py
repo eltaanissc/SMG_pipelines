@@ -103,6 +103,16 @@ class Pipeline:
             semantic_configuration_name="vector-indexturbosa-semantic-configuration",
             top=5,
         )
+
+        # If search_results is not already a list, convert it into one
+        if not isinstance(search_results, list):
+            search_results = list(search_results)
+
+        # Remove extra blank spaces between words in the chunk using regex
+        for document in search_results:
+            document['chunk'] = re.sub(r'\s+', ' ', document['chunk']).strip()
+
+            
         sources_formatted = "\n=================\n".join(
             [
                 f"FILE: {document['title']}\nCONTENT: {document['chunk']}"
@@ -127,7 +137,7 @@ class Pipeline:
         source_list = "\n".join(
             [f"- {document['title']} (Score: {search_results['@search.score']}:.2f)" for document in search_results]
         )
-        print (f"'{source_list}'")
+
         return sources_formatted, source_list
 
     def pipe(
