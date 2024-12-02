@@ -109,6 +109,21 @@ class Pipeline:
                 for document in search_results
             ]
         )
+
+        # Sort by score in descending order and take the top three
+        top_results = sorted(search_results, key=lambda doc: doc['@search.score'], reverse=True)[:3]
+
+        
+        # Formatting to lowercase and bold using ANSI escape codes
+        source_list = "\n\n".join(
+            [
+                f"**title:** {document['title'].lower()}\n"
+                f"**score:** {document['@search.score']:.2f}\n"
+                f"**related text starts from:** {' '.join(document['chunk'].lower().split()[:20])}..."
+                for document in top_results
+            ]
+        )
+
         source_list = "\n".join(
             [f"- {document['title']} (Score: {search_results['@search.score']}:.2f)" for document in search_results]
         )
