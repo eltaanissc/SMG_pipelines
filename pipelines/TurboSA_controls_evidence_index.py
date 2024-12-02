@@ -22,6 +22,9 @@ from dotenv import load_dotenv
 
 class Pipeline:
     def __init__(self):
+        pass
+
+    async def on_startup(self):
         load_dotenv()
         try:
             self.client_cosmosdb = CosmosClient(
@@ -56,16 +59,12 @@ class Pipeline:
             print("Connected to Azure Search successfully.")
         except Exception as e:
             print(f"Failed to connect to Azure Search: {e}")
-        pass
-
-    async def on_startup(self):
-        pass
 
     async def on_shutdown(self):
         pass
 
     def fetch_cosmos_data(self, family: str, control_id: str):
-        query = f"SELECT  * FROM c WHERE c.Family = '{family}' AND c.ControlID = '{control_id}'"
+        query = f"SELECT * FROM c WHERE c.Family = '{family}' AND c.ControlID = '{control_id}'"
         try:
             results = list(self.container.query_items(query=query, enable_cross_partition_query=True))
             if results:
@@ -100,42 +99,20 @@ class Pipeline:
         search_results = self.search_client.search(
             search_text=query_text,
             query_type="semantic",
-            select=['title', 'chunk'],
+            select=["title", "chunk"],
             semantic_configuration_name="vector-indexturbosa-semantic-configuration",
             top=5,
         )
-
-            # If search_results is not already a list, convert it into one
-        if not isinstance(search_results, list):
-            search_results = list(search_results)
-
-            # Remove extra blank spaces between words in the chunk using regex
-        for document in search_results:
-            document['chunk'] = re.sub(r'\s+', ' ', document['chunk']).strip()
-
         sources_formatted = "\n=================\n".join(
-                [
-                    f"FILE: {document['title']}\nCONTENT: {document['chunk']}" for document in search_results
-                ]
-            )
-        
-        # Sort by score in descending order and take the top three
-        top_results = sorted(search_results, key=lambda doc: doc['@search.score'], reverse=True)[:3]
-
-        
-    # Formatting to lowercase and bold using ANSI escape codes
-        source_list = "\n\n".join(
             [
-                f"**title:** {document['title'].lower()}\n"
-                f"**score:** {document['@search.score']:.2f}\n"
-                f"**related text starts from:** {' '.join(document['chunk'].lower().split()[:20])}..."
-                for document in top_results
+                f"FILE: {document['title']}\nCONTENT: {document['chunk']}"
+                for document in search_results
             ]
         )
-
-
-
-
+        source_list = "\n".join(
+            [f"- {document['title']} (Score: {search_results['@search.score']}:.2f)" for document in search_results]
+        )
+        print (f"'{source_list}'")
         return sources_formatted, source_list
 
     def pipe(
@@ -145,7 +122,7 @@ class Pipeline:
         
         # Extract Family and ControlID from user message
         family, control_id = self.extract_family_and_control_id(user_message)
-        
+
 
         if family and control_id:
             control_data = self.fetch_cosmos_data(family, control_id)
@@ -163,19 +140,18 @@ class Pipeline:
                             if question:  # Skip empty questions if any
                                 # Construct the search query for the specific question
                                 search_query = f"{control_name} {question}"
-                                
+
                                 # Perform search with both control name and question for specific chunks
-                                sources_formatted, source_list = self.run_search(search_query)
-                                
-                                if  sources_formatted :
+                                search_results, source_list = self.run_search(search_query)
+
+                                if  search_results:
                                     
                                     sys_prompt = f"""
                                     You are an expert in security controls. Respond to the following QUESTION based on the provided CONTROL NAME and DOCUMENT TEXT.
-                                    Provide the company's name at the beginning. Verify if the QUESTION is answered in the DOCUMENT TEXT and presente the Text and page number supporting this at the end. Do not add any unnecessary explanations                                
-                                    Answer the QUESTION in small paragraph.
+                                    Provide the company's name at the beginning. Verify if the QUESTION is answered in the DOCUMENT TEXT. Do not add any unnecessary explanations                                Provied the company's name at the begning. Verify if the  QUESTION was answerd in DOCUMENT TEXT.Don't add any unecessairy explanations.
 
                                     CONTROL NAME: {control_name}
-                                    DOCUMENT TEXT: {sources_formatted}
+                                    DOCUMENT TEXT: {search_results}
                                     QUESTION: {question}
                                     """
 
@@ -184,7 +160,7 @@ class Pipeline:
                                         {"role": "user", "content": question},
                                     ]
 
-                                    #Get the answer for the current question
+                                    # Get the answer for the current question
                                     completion = self.client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=chat_prompt,
@@ -195,17 +171,14 @@ class Pipeline:
 
                                     # Retrieve the response and store it
                                     gpt_result = completion.choices[0].message.content
-                                    # Store the result as a tuple (question, answer)
-                                    all_answers.append(f"**Q: {question}**\nA: {gpt_result}\nSources used:\n{source_list}")
-                                  
-                                else:
-                                   gpt_result = "An error occurred while generating the response." 
+                                    print(f"'{source_list}'")
 
-                                   
-                                
+
+                                # Store the result as a tuple (question, answer)
+                                all_answers.append(f"**Q: {question}**\nA: {gpt_result}\nSources used:\n{source_list}")
 
                         # Combine all the answers into a single response
-                    final_response = f"**Family:'{family}'**\n ControlID:'{control_id}'\n".join(all_answers)
+                            final_response = f"**Family:'{family}'**\n ControlID:'{control_id}'\n".join(all_answers)
 
             return f"'{final_response}'"
            
